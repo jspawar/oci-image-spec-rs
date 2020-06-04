@@ -1,6 +1,7 @@
 use std::io::Read;
 use std::fs::{File};
 use serde::{Deserialize, Serialize};
+use chrono::prelude::*;
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct Config {
@@ -9,10 +10,10 @@ pub struct Config {
     pub os: OS,
     pub rootfs: ConfigRootFs,
     // optional
-    pub created: Option<String>,
+    pub created: Option<DateTime<Utc>>,
     pub author: Option<String>,
-    pub config: Option<String>,
-    pub history: Option<String>,
+    pub config: Option<ConfigConfig>,
+    pub history: Option<Vec<ConfigHistory>>,
 }
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -59,6 +60,20 @@ pub struct ConfigRootFs {
 }
 
 #[derive(Debug, Serialize, Deserialize)]
+pub struct ConfigConfig {
+  pub user: Option<String>,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct ConfigHistory {
+  pub created: Option<DateTime<Utc>>,
+  pub author: Option<String>,
+  pub created_by: Option<String>,
+  pub comment: Option<String>,
+  pub empty_layer: Option<bool>,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
 #[serde(rename_all = "lowercase")]
 pub enum RootFsType {
   Layers,
@@ -100,6 +115,7 @@ mod tests {
         use std::io::{Seek, Write};
         use std::fs::OpenOptions;
 
+        // TODO: return ref to file?
         pub fn create_temp_file(name: &'static str) -> File {
             let mut tmp_path = std::env::temp_dir();
             tmp_path.push("oci-image-spec-rs-tests");
@@ -114,6 +130,7 @@ mod tests {
               .unwrap()
         }
 
+        // TODO: return ref to file?
         pub fn create_temp_config_file(name: &'static str, contents: &[u8]) -> File {
           let mut cfg_file = create_temp_file(name);
           cfg_file.write_all(contents).unwrap();
@@ -140,9 +157,7 @@ mod tests {
                 history: None,
             };
             let serialized = serde_json::to_string_pretty(&config).unwrap();
-            assert_eq!(
-                serialized,
-                r#"{
+            assert_eq!(serialized, r#"{
   "architecture": "386",
   "os": "linux",
   "rootfs": {
@@ -153,8 +168,7 @@ mod tests {
   "author": null,
   "config": null,
   "history": null
-}"#
-            );
+}"#);
         }
 
         #[test]
@@ -197,34 +211,72 @@ mod tests {
 
         #[test]
         fn serializes_correctly() {
+            let timestamp = Utc::now();
             let config = Config {
                 architecture: Architecture::_386,
                 os: OS::Linux,
                 rootfs: ConfigRootFs {
                     _type: RootFsType::Layers,
-                    diff_ids: vec![],
+                    diff_ids: vec![String::from("sha256:some-sha")],
                 },
-                created: None,
-                author: None,
-                config: None,
-                history: None,
+                created: Some(timestamp),
+                author: Some(String::from("Some One <someone@some.where>")),
+                config: Some(ConfigConfig{
+                  user: Some(String::from("user")),
+                }),
+                history: Some(vec![ConfigHistory{
+                  created: Some(timestamp),
+                  author: Some(String::from("Some One <someone@some.where>")),
+                  created_by: Some(String::from("/bin/sh")),
+                  comment: Some(String::from("this is a comment")),
+                  empty_layer: Some(false),
+                }]),
             };
+
             let serialized = serde_json::to_string_pretty(&config).unwrap();
-            assert_eq!(
-                serialized,
-                r#"{
+            let timestamp_str = timestamp.to_rfc3339_opts(SecondsFormat::Micros, true);
+            assert_eq!(serialized, format!(r#"{{
   "architecture": "386",
   "os": "linux",
-  "rootfs": {
+  "rootfs": {{
     "type": "layers",
     "diff_ids": []
-  },
-  "created": null,
-  "author": null,
-  "config": null,
-  "history": null
-}"#
-            );
+  }},
+  "created": "{}",
+  "author": "Some One <someone@some.where>",
+  "config": {{
+    "User": "user",
+    "ExposedPorts": {{
+      "8080/tcp": {{}}
+    }},
+    "Env": [
+      "FOO=BAR"
+    ],
+    "Entrypoint": [
+      "/bin/sh"
+    ],
+    "Cmd": [
+      "-c",
+      "echo hello"
+    ],
+    "Volumes": {{
+      "/tmp/foobar": {{}}
+    }},
+    "WorkingDir": "/home",
+    "Labels": {{
+      "bar.foo": "this is a label"
+    }}
+  }},
+  "history": [
+    {{
+      "created": "{}",
+      "author": "Some One <someone@some.where>",
+      "created_by": "/bin/sh",
+      "comment": "this is a comment",
+      "empty_layer": false
+    }}
+  ]
+}}"#, timestamp_str, timestamp_str));
         }
 
         #[test]

@@ -1,6 +1,12 @@
+use std::fmt::Display;
 use std::io::Read;
 use std::fs::{File};
+use std::collections::HashMap;
+
 use serde::{Deserialize, Serialize};
+use serde::ser::{Serializer, SerializeMap};
+use serde::de::{Deserializer};
+
 use chrono::prelude::*;
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -62,6 +68,55 @@ pub struct ConfigRootFs {
 #[derive(Debug, Serialize, Deserialize)]
 pub struct ConfigConfig {
   pub user: Option<String>,
+  // pub exposed_ports: Option<ExposedPorts>,
+}
+
+#[derive(Debug)]
+pub struct ExposedPorts {
+  pub port_protocol_map: HashMap<i32, Option<PortProtocol>>,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+#[serde(rename_all = "lowercase")]
+pub enum PortProtocol {
+  TCP,
+  UDP,
+}
+
+impl Display for PortProtocol {
+  fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
+    let mut to_display = format!("{:?}", self);
+    to_display.make_ascii_lowercase();
+    write!(f, "{}", to_display)
+  }
+}
+
+impl Serialize for ExposedPorts {
+  fn serialize<S: Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
+    #[derive(Debug,Serialize)]
+    struct Empty {}
+
+    let mut state = serializer.serialize_map(Some(self.port_protocol_map.len()))?;
+    for (k, v) in &self.port_protocol_map {
+      match v {
+        Some(port_protocol) => {
+          state.serialize_entry(&format!("{}/{}", k, port_protocol), &Empty{})?;
+        },
+        None => {
+          state.serialize_entry(&format!("{}", k), &Empty{})?;
+        }
+      }
+    }
+
+    state.end()
+  }
+}
+
+impl<'de> Deserialize<'de> for ExposedPorts {
+  fn deserialize<D: Deserializer<'de>>(deserializer: D) -> Result<Self, D::Error> {
+    // TODO: implement
+    Ok(ExposedPorts{port_protocol_map: HashMap::new()})
+  }
 }
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -137,6 +192,53 @@ mod tests {
           cfg_file.seek(std::io::SeekFrom::Start(0)).unwrap();
           cfg_file
         }
+    }
+
+    mod exposed_ports {
+      use super::*;
+
+      #[test]
+      fn serializes_correctly() {
+        let mut port_protocol_map = HashMap::new();
+        port_protocol_map.insert(11111, Some(PortProtocol::TCP));
+        port_protocol_map.insert(22222, Some(PortProtocol::UDP));
+        port_protocol_map.insert(33333, None);
+        let exposed_ports = ExposedPorts{
+          port_protocol_map: port_protocol_map,
+        };
+
+        let serialized = serde_json::to_string(&exposed_ports).unwrap();
+        let possible_serializations = vec![
+          r#"{"11111/tcp":{},"22222/udp":{},"33333":{}}"#,
+          r#"{"11111/tcp":{},"33333":{},"22222/udp":{}}"#,
+          r#"{"22222/udp":{},"11111/tcp":{},"33333":{}}"#,
+          r#"{"22222/udp":{},"33333":{},"11111/tcp":{}}"#,
+          r#"{"33333":{},"11111/tcp":{},"22222/udp":{}}"#,
+          r#"{"33333":{},"22222/udp":{},"11111/tcp":{}}"#,
+        ];
+
+        // loop over all possible serializations because serializations for each possible ordering
+        // of underlying hash map's ordering of items
+        let mut was_ever_serialized_correctly = false;
+        for possible_serialization in &possible_serializations {
+          let result = std::panic::catch_unwind(|| {
+            assert_eq!(&serialized, &possible_serialization.to_string());
+          });
+          if result.is_ok() {
+            was_ever_serialized_correctly = true;
+            break
+          }
+        }
+        assert_eq!(was_ever_serialized_correctly, true);
+      }
+
+      #[test]
+      fn deserializes_correctly() {
+        let raw = r#"{"11111/tcp":{},"22222/udp":{},"33333":{}}"#;
+        let exposed_ports: ExposedPorts = serde_json::from_str(&raw).unwrap();
+
+        // TODO: create `assert_map_contains(key, value)`
+      }
     }
 
     mod with_only_required_properties {

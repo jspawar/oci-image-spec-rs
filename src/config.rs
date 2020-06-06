@@ -63,13 +63,22 @@ pub enum OS {
 pub struct ConfigRootFs {
     #[serde(rename = "type")]
     pub _type: RootFsType,
+    // TODO: change this to some sort of type that is basically: `<hash_alg>:<hash>`
     pub diff_ids: Vec<String>,
 }
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct ConfigConfig {
-  pub user: Option<String>,
+  // TODO: make a struct for `user` like for `ExposedPorts`?
+  // pub user: Option<String>,
   pub exposed_ports: Option<ExposedPorts>,
+  // pub env: Option<Vec<EnvVar>,
+  pub entrypoint: Option<Vec<String>>,
+  pub cmd: Option<Vec<String>>,
+  // pub volumes: Option<Volumes>,
+  pub working_dir: Option<String>,
+  pub labels: Option<HashMap<String, String>>,
+  // pub stop_signal: Option<OsSignal>,
 }
 
 #[derive(Debug)]
@@ -362,27 +371,36 @@ mod tests {
             let timestamp = Utc::now();
             let mut port_protocol_map = HashMap::new();
             port_protocol_map.insert(8080, Some(PortProtocol::TCP));
+            let mut labels = HashMap::new();
+            labels.insert("bar.foo".to_string(), "this is a label".to_string());
 
             let config = Config {
                 architecture: Architecture::_386,
                 os: OS::Linux,
                 rootfs: ConfigRootFs {
                     _type: RootFsType::Layers,
-                    diff_ids: vec![String::from("sha256:some-sha")],
+                    diff_ids: vec!["sha256:some-sha".to_string()],
                 },
                 created: Some(timestamp),
-                author: Some(String::from("Some One <someone@some.where>")),
+                author: Some("Some One <someone@some.where>".to_string()),
                 config: Some(ConfigConfig{
-                  user: Some(String::from("user")),
+                  // user: Some(String::from("user")),
                   exposed_ports: Some(ExposedPorts{
                     port_protocol_map: port_protocol_map,
                   }),
+                  entrypoint: Some(vec!["/bin/sh".to_string()]),
+                  cmd: Some(vec![
+                    "-c".to_string(),
+                    "echo hello".to_string(),
+                  ]),
+                  working_dir: Some("/home".to_string()),
+                  labels: Some(labels),
                 }),
                 history: Some(vec![ConfigHistory{
                   created: Some(timestamp),
-                  author: Some(String::from("Some One <someone@some.where>")),
-                  created_by: Some(String::from("/bin/sh")),
-                  comment: Some(String::from("this is a comment")),
+                  author: Some("Some One <someone@some.where>".to_string()),
+                  created_by: Some("/bin/sh".to_string()),
+                  comment: Some("this is a comment".to_string()),
                   empty_layer: Some(false),
                 }]),
             };

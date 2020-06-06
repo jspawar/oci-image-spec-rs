@@ -5,10 +5,11 @@ use std::collections::HashMap;
 
 use serde::{Deserialize, Serialize};
 use serde::ser::{Serializer, SerializeMap};
-use serde::de::{Deserializer};
+use serde::de::{Deserializer, Visitor, MapAccess};
 
 use chrono::prelude::*;
 
+// TODO: reorganize/split up this file, but in a way that makes sense for importing it too
 #[derive(Debug, Serialize, Deserialize)]
 pub struct Config {
     // required
@@ -68,27 +69,12 @@ pub struct ConfigRootFs {
 #[derive(Debug, Serialize, Deserialize)]
 pub struct ConfigConfig {
   pub user: Option<String>,
-  // pub exposed_ports: Option<ExposedPorts>,
+  pub exposed_ports: Option<ExposedPorts>,
 }
 
 #[derive(Debug)]
 pub struct ExposedPorts {
   pub port_protocol_map: HashMap<i32, Option<PortProtocol>>,
-}
-
-#[derive(Debug, Serialize, Deserialize)]
-#[serde(rename_all = "lowercase")]
-pub enum PortProtocol {
-  TCP,
-  UDP,
-}
-
-impl Display for PortProtocol {
-  fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
-    let mut to_display = format!("{:?}", self);
-    to_display.make_ascii_lowercase();
-    write!(f, "{}", to_display)
-  }
 }
 
 impl Serialize for ExposedPorts {
@@ -114,8 +100,52 @@ impl Serialize for ExposedPorts {
 
 impl<'de> Deserialize<'de> for ExposedPorts {
   fn deserialize<D: Deserializer<'de>>(deserializer: D) -> Result<Self, D::Error> {
-    // TODO: implement
-    Ok(ExposedPorts{port_protocol_map: HashMap::new()})
+    deserializer.deserialize_map(ExposedPortsVisitor{})
+  }
+}
+struct ExposedPortsVisitor;
+impl <'de> Visitor<'de> for ExposedPortsVisitor {
+  type Value = ExposedPorts;
+
+  fn expecting(&self, formatter: &mut std::fmt::Formatter) -> std::fmt::Result {
+    // TODO: what do I put here
+    formatter.write_str("TODO: idk what I put here")
+  }
+
+  fn visit_map<M: MapAccess<'de>>(self, mut access: M) -> Result<Self::Value, M::Error> {
+    let mut port_protocol_map: HashMap<i32, Option<PortProtocol>> = HashMap::new();
+
+    while let Some((port_protocol, _)) = access.next_entry::<String, HashMap<(), ()>>()? {
+      let tokens = port_protocol.split("/").collect::<Vec<&str>>();
+      if tokens.len() > 1 {
+        let port: i32 = tokens[0].parse().unwrap();
+        let protocol = tokens[1];
+        match protocol {
+          "tcp" => {port_protocol_map.insert(port, Some(PortProtocol::TCP));},
+          "udp" => {port_protocol_map.insert(port, Some(PortProtocol::UDP));},
+          _ => {/*TODO: idk lol*/}
+        }
+      } else {
+        let port: i32 = tokens[0].parse().unwrap();
+        port_protocol_map.insert(port, None);
+      }
+    }
+
+    Ok(ExposedPorts{port_protocol_map: port_protocol_map})
+  }
+}
+
+#[derive(Debug, PartialEq, Serialize, Deserialize)]
+#[serde(rename_all = "lowercase")]
+pub enum PortProtocol {
+  TCP,
+  UDP,
+}
+impl Display for PortProtocol {
+  fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
+    let mut to_display = format!("{:?}", self);
+    to_display.make_ascii_lowercase();
+    write!(f, "{}", to_display)
   }
 }
 
@@ -152,9 +182,7 @@ impl From<serde_json::error::Error> for ParseError {
 
 pub fn parse_v1_config_file(file: &mut File) -> Result<Config, ParseError> {
   let mut raw = String::new();
-  let num_read = file.read_to_string(&mut raw)?;
-  println!("received the following number of bytes: {}", num_read);
-  println!("received the following file contents: {:?}", raw);
+  file.read_to_string(&mut raw)?;
 
   let config: Config = serde_json::from_str(&raw)?;
   Ok(config)
@@ -169,6 +197,20 @@ mod tests {
         use super::*;
         use std::io::{Seek, Write};
         use std::fs::OpenOptions;
+
+        pub fn assert_map_len<K, V>(map: &HashMap<K, V>, expected: usize) {
+          assert_eq!(map.len(), expected);
+        }
+
+        // TODO: pass in `K` or `&K`?
+        // TODO: pass in `V` or `&V`?
+        pub fn assert_map_contains<K, V>(map: &HashMap<K, V>, key: K, val: V)
+          where K: std::cmp::Eq + std::hash::Hash,
+                V: std::cmp::PartialEq + std::fmt::Debug,
+        {
+          assert_eq!(map.contains_key(&key), true);
+          assert_eq!(map[&key], val);
+        }
 
         // TODO: return ref to file?
         pub fn create_temp_file(name: &'static str) -> File {
@@ -196,6 +238,7 @@ mod tests {
 
     mod exposed_ports {
       use super::*;
+      use test_helpers::*;
 
       #[test]
       fn serializes_correctly() {
@@ -237,7 +280,10 @@ mod tests {
         let raw = r#"{"11111/tcp":{},"22222/udp":{},"33333":{}}"#;
         let exposed_ports: ExposedPorts = serde_json::from_str(&raw).unwrap();
 
-        // TODO: create `assert_map_contains(key, value)`
+        assert_map_len(&exposed_ports.port_protocol_map, 3);
+        assert_map_contains(&exposed_ports.port_protocol_map, 11111, Some(PortProtocol::TCP));
+        assert_map_contains(&exposed_ports.port_protocol_map, 22222, Some(PortProtocol::UDP));
+        assert_map_contains(&exposed_ports.port_protocol_map, 33333, None);
       }
     }
 
@@ -314,6 +360,9 @@ mod tests {
         #[test]
         fn serializes_correctly() {
             let timestamp = Utc::now();
+            let mut port_protocol_map = HashMap::new();
+            port_protocol_map.insert(8080, Some(PortProtocol::TCP));
+
             let config = Config {
                 architecture: Architecture::_386,
                 os: OS::Linux,
@@ -325,6 +374,9 @@ mod tests {
                 author: Some(String::from("Some One <someone@some.where>")),
                 config: Some(ConfigConfig{
                   user: Some(String::from("user")),
+                  exposed_ports: Some(ExposedPorts{
+                    port_protocol_map: port_protocol_map,
+                  }),
                 }),
                 history: Some(vec![ConfigHistory{
                   created: Some(timestamp),

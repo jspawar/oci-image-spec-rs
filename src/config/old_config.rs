@@ -5,22 +5,21 @@ use std::collections::HashMap;
 use crate::config::exposed_ports::{ExposedPorts};
 use crate::config::errors::{ParseError};
 
-use serde::{Deserialize, Serialize};
-
 use chrono::prelude::*;
+use serde::{Deserialize, Serialize};
 
 // TODO: reorganize/split up this file, but in a way that makes sense for importing it too
 #[derive(Debug, Serialize, Deserialize)]
-pub struct Config {
+pub struct ImageConfig {
     // required
     pub architecture: Architecture,
     pub os: OS,
-    pub rootfs: ConfigRootFs,
+    pub rootfs: RootFS,
     // optional
     pub created: Option<DateTime<Utc>>,
     pub author: Option<String>,
-    pub config: Option<ConfigConfig>,
-    pub history: Option<Vec<ConfigHistory>>,
+    pub config: Option<Config>,
+    pub history: Option<Vec<History>>,
 }
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -60,15 +59,15 @@ pub enum OS {
 }
 
 #[derive(Debug, Serialize, Deserialize)]
-pub struct ConfigRootFs {
+pub struct RootFS {
     #[serde(rename = "type")]
-    pub _type: RootFsType,
+    pub _type: RootFSType,
     // TODO: change this to some sort of type that is basically: `<hash_alg>:<hash>`
     pub diff_ids: Vec<String>,
 }
 
 #[derive(Debug, Serialize, Deserialize)]
-pub struct ConfigConfig {
+pub struct Config {
   // TODO: make a struct for `user` like for `ExposedPorts`?
   // pub user: Option<String>,
   pub exposed_ports: Option<ExposedPorts>,
@@ -82,7 +81,7 @@ pub struct ConfigConfig {
 }
 
 #[derive(Debug, Serialize, Deserialize)]
-pub struct ConfigHistory {
+pub struct History {
   pub created: Option<DateTime<Utc>>,
   pub author: Option<String>,
   pub created_by: Option<String>,
@@ -92,15 +91,15 @@ pub struct ConfigHistory {
 
 #[derive(Debug, Serialize, Deserialize)]
 #[serde(rename_all = "lowercase")]
-pub enum RootFsType {
+pub enum RootFSType {
   Layers,
 }
 
-pub fn parse_v1_config_file(file: &mut File) -> Result<Config, ParseError> {
+pub fn parse_image_config_file(file: &mut File) -> Result<ImageConfig, ParseError> {
   let mut raw = String::new();
   file.read_to_string(&mut raw)?;
 
-  let config: Config = serde_json::from_str(&raw)?;
+  let config: ImageConfig = serde_json::from_str(&raw)?;
   Ok(config)
 }
 
@@ -114,11 +113,11 @@ mod tests {
 
         #[test]
         fn serializes_correctly() {
-            let config = Config {
+            let config = ImageConfig {
                 architecture: Architecture::_386,
                 os: OS::Linux,
-                rootfs: ConfigRootFs {
-                    _type: RootFsType::Layers,
+                rootfs: RootFS {
+                    _type: RootFSType::Layers,
                     diff_ids: vec![],
                 },
                 created: None,
@@ -153,7 +152,7 @@ mod tests {
     ]
   }
 }"#);
-            let deserialized = parse_v1_config_file(&mut cfg_file).unwrap();
+            let deserialized = parse_image_config_file(&mut cfg_file).unwrap();
 
             match deserialized.architecture {
               Architecture::_386 => {}
@@ -164,7 +163,7 @@ mod tests {
               _ => {panic!("Received unexpected OS: {:?}", deserialized.os)}
             }
             match deserialized.rootfs._type {
-              RootFsType::Layers => {}
+              RootFSType::Layers => {}
             }
             assert_eq!(deserialized.rootfs.diff_ids.len(), 1);
             assert_eq!(deserialized.rootfs.diff_ids[0], "sha256:bogus-sha");
@@ -188,16 +187,16 @@ mod tests {
             let mut labels = HashMap::new();
             labels.insert("bar.foo".to_string(), "this is a label".to_string());
 
-            let config = Config {
+            let config = ImageConfig {
                 architecture: Architecture::_386,
                 os: OS::Linux,
-                rootfs: ConfigRootFs {
-                    _type: RootFsType::Layers,
+                rootfs: RootFS {
+                    _type: RootFSType::Layers,
                     diff_ids: vec!["sha256:some-sha".to_string()],
                 },
                 created: Some(timestamp),
                 author: Some("Some One <someone@some.where>".to_string()),
-                config: Some(ConfigConfig{
+                config: Some(Config{
                   // user: Some(String::from("user")),
                   exposed_ports: Some(ExposedPorts{
                     port_protocol_map: port_protocol_map,
@@ -210,7 +209,7 @@ mod tests {
                   working_dir: Some("/home".to_string()),
                   labels: Some(labels),
                 }),
-                history: Some(vec![ConfigHistory{
+                history: Some(vec![History{
                   created: Some(timestamp),
                   author: Some("Some One <someone@some.where>".to_string()),
                   created_by: Some("/bin/sh".to_string()),
@@ -277,7 +276,7 @@ mod tests {
     ]
   }
 }"#);
-            let deserialized = parse_v1_config_file(&mut cfg_file).unwrap();
+            let deserialized = parse_image_config_file(&mut cfg_file).unwrap();
 
             match deserialized.architecture {
               Architecture::_386 => {}
@@ -288,7 +287,7 @@ mod tests {
               _ => {panic!("Received unexpected OS: {:?}", deserialized.os)}
             }
             match deserialized.rootfs._type {
-              RootFsType::Layers => {}
+              RootFSType::Layers => {}
             }
             assert_eq!(deserialized.rootfs.diff_ids.len(), 1);
             assert_eq!(deserialized.rootfs.diff_ids[0], "sha256:bogus-sha");

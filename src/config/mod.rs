@@ -9,11 +9,11 @@ pub use errors::{ParseError};
 
 mod old_config;
 pub use old_config::{
-  Config,
+  ImageConfig,
   Architecture,
   OS,
-  ConfigRootFs,
-  ConfigConfig,
-  ConfigHistory,
-  RootFsType,
+  RootFS,
+  Config,
+  History,
+  RootFSType,
 };

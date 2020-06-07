@@ -3,6 +3,7 @@ use std::fs::{File};
 use std::collections::HashMap;
 
 use crate::config::exposed_ports::{ExposedPorts};
+use crate::config::errors::{ParseError};
 
 use serde::{Deserialize, Serialize};
 
@@ -93,22 +94,6 @@ pub struct ConfigHistory {
 #[serde(rename_all = "lowercase")]
 pub enum RootFsType {
   Layers,
-}
-
-#[derive(Debug)]
-pub enum ParseError {
-  IOError(std::io::Error),
-  SerdeError(serde_json::error::Error),
-}
-impl From<std::io::Error> for ParseError {
-  fn from(error: std::io::Error) -> Self {
-    ParseError::IOError(error)
-  }
-}
-impl From<serde_json::error::Error> for ParseError {
-  fn from(error: serde_json::error::Error) -> Self {
-    ParseError::SerdeError(error)
-  }
 }
 
 pub fn parse_v1_config_file(file: &mut File) -> Result<Config, ParseError> {

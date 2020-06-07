@@ -24,6 +24,9 @@ mod tests {
     let exposed_ports_type_name = std::any::type_name::<ExposedPorts>();
     assert!(exposed_ports_type_name.contains(&CRATE_NAME));
 
+    let parse_error_type_name = std::any::type_name::<ParseError>();
+    assert!(parse_error_type_name.contains(&CRATE_NAME));
+
     let config_type_name = std::any::type_name::<Config>();
     assert!(config_type_name.contains(&CRATE_NAME));
   }

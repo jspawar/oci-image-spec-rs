@@ -2,6 +2,7 @@ use std::io::Read;
 use std::fs::{File};
 use std::collections::HashMap;
 
+use crate::config::v1::env_var::{EnvVar};
 use crate::config::v1::exposed_ports::{ExposedPorts};
 use crate::config::v1::errors::{ParseError};
 
@@ -71,7 +72,7 @@ pub struct Config {
   // TODO: make a struct for `user` like for `ExposedPorts`?
   // pub user: Option<String>,
   pub exposed_ports: Option<ExposedPorts>,
-  // pub env: Option<Vec<EnvVar>,
+  pub env: Option<Vec<EnvVar>>,
   pub entrypoint: Option<Vec<String>>,
   pub cmd: Option<Vec<String>>,
   // pub volumes: Option<Volumes>,
@@ -201,6 +202,10 @@ mod tests {
                   exposed_ports: Some(ExposedPorts{
                     port_protocol_map: port_protocol_map,
                   }),
+                  env: Some(vec![EnvVar{
+                    var_name: "FOO".to_string(),
+                    var_value: "BAR".to_string(),
+                  }]),
                   entrypoint: Some(vec!["/bin/sh".to_string()]),
                   cmd: Some(vec![
                     "-c".to_string(),

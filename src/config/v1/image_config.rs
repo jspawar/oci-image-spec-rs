@@ -2,8 +2,8 @@ use std::io::Read;
 use std::fs::{File};
 use std::collections::HashMap;
 
-use crate::config::exposed_ports::{ExposedPorts};
-use crate::config::errors::{ParseError};
+use crate::config::v1::exposed_ports::{ExposedPorts};
+use crate::config::v1::errors::{ParseError};
 
 use chrono::prelude::*;
 use serde::{Deserialize, Serialize};
@@ -177,7 +177,7 @@ mod tests {
 
     mod with_all_optional_properties {
         use super::*;
-        use crate::config::exposed_ports::{PortProtocol};
+        use crate::config::v1::exposed_ports::{PortProtocol};
 
         #[test]
         fn serializes_correctly() {

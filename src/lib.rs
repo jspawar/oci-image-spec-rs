@@ -27,6 +27,20 @@ mod tests {
     let parse_error_type_name = std::any::type_name::<ParseError>();
     assert!(parse_error_type_name.contains(&CRATE_NAME));
 
+    let architecture_type_name = std::any::type_name::<Architecture>();
+    assert!(architecture_type_name.contains(&CRATE_NAME));
+    let os_type_name = std::any::type_name::<OS>();
+    assert!(os_type_name.contains(&CRATE_NAME));
+    let config_root_fs_type_name = std::any::type_name::<ConfigRootFs>();
+    assert!(config_root_fs_type_name.contains(&CRATE_NAME));
+    let config_config_type_name = std::any::type_name::<ConfigConfig>();
+    assert!(config_config_type_name.contains(&CRATE_NAME));
+    let config_history_type_name = std::any::type_name::<ConfigHistory>();
+    assert!(config_history_type_name.contains(&CRATE_NAME));
+
+    let root_fs_type_type_name = std::any::type_name::<RootFsType>();
+    assert!(root_fs_type_type_name.contains(&CRATE_NAME));
+
     let config_type_name = std::any::type_name::<Config>();
     assert!(config_type_name.contains(&CRATE_NAME));
   }

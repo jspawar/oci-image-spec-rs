@@ -10,4 +10,10 @@ pub use errors::{ParseError};
 mod old_config;
 pub use old_config::{
   Config,
+  Architecture,
+  OS,
+  ConfigRootFs,
+  ConfigConfig,
+  ConfigHistory,
+  RootFsType,
 };

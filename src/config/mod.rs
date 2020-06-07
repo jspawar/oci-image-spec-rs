@@ -7,8 +7,8 @@ pub use exposed_ports::{ExposedPorts, PortProtocol};
 mod errors;
 pub use errors::{ParseError};
 
-mod old_config;
-pub use old_config::{
+mod image_config;
+pub use image_config::{
   ImageConfig,
   Architecture,
   OS,

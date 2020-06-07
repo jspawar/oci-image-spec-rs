@@ -1,5 +1,8 @@
 mod config;
 
+#[cfg(test)]
+mod test_helpers;
+
 pub use config::*;
 
 #[cfg(test)]

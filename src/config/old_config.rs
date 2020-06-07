@@ -122,50 +122,7 @@ pub fn parse_v1_config_file(file: &mut File) -> Result<Config, ParseError> {
 #[cfg(test)]
 mod tests {
     use super::*;
-
-    // TODO: move this somewhere else?
-    mod test_helpers {
-        use super::*;
-        use std::io::{Seek, Write};
-        use std::fs::OpenOptions;
-
-        pub fn assert_map_len<K, V>(map: &HashMap<K, V>, expected: usize) {
-          assert_eq!(map.len(), expected);
-        }
-
-        // TODO: pass in `K` or `&K`?
-        // TODO: pass in `V` or `&V`?
-        pub fn assert_map_contains<K, V>(map: &HashMap<K, V>, key: K, val: V)
-          where K: std::cmp::Eq + std::hash::Hash,
-                V: std::cmp::PartialEq + std::fmt::Debug,
-        {
-          assert_eq!(map.contains_key(&key), true);
-          assert_eq!(map[&key], val);
-        }
-
-        // TODO: return ref to file?
-        pub fn create_temp_file(name: &'static str) -> File {
-            let mut tmp_path = std::env::temp_dir();
-            tmp_path.push("oci-image-spec-rs-tests");
-            std::fs::create_dir_all(&tmp_path).unwrap();
-            tmp_path.push(name);
-
-            OpenOptions::new()
-              .read(true)
-              .write(true)
-              .create(true)
-              .open(tmp_path)
-              .unwrap()
-        }
-
-        // TODO: return ref to file?
-        pub fn create_temp_config_file(name: &'static str, contents: &[u8]) -> File {
-          let mut cfg_file = create_temp_file(name);
-          cfg_file.write_all(contents).unwrap();
-          cfg_file.seek(std::io::SeekFrom::Start(0)).unwrap();
-          cfg_file
-        }
-    }
+    use crate::test_helpers::utils::*;
 
     mod with_only_required_properties {
         use super::*;
@@ -201,7 +158,7 @@ mod tests {
 
         #[test]
         fn parses_correctly() {
-            let mut cfg_file = test_helpers::create_temp_config_file("config.json", br#"{
+            let mut cfg_file = create_temp_file_with_contents("config.json", br#"{
   "architecture": "386",
   "os": "linux",
   "rootfs": {
@@ -325,7 +282,7 @@ mod tests {
 
         #[test]
         fn parses_correctly() {
-            let mut cfg_file = test_helpers::create_temp_config_file("config.json", br#"{
+            let mut cfg_file = create_temp_file_with_contents("config.json", br#"{
   "architecture": "386",
   "os": "linux",
   "rootfs": {

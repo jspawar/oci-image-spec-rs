@@ -91,30 +91,10 @@ impl Display for PortProtocol {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::test_helpers::assertions::*;
 
-    // TODO: move this somewhere else?
-    mod test_helpers {
+    mod json {
         use super::*;
-
-        pub fn assert_map_len<K, V>(map: &HashMap<K, V>, expected: usize) {
-            assert_eq!(map.len(), expected);
-        }
-
-        // TODO: pass in `K` or `&K`?
-        // TODO: pass in `V` or `&V`?
-        pub fn assert_map_contains<K, V>(map: &HashMap<K, V>, key: K, val: V)
-        where
-            K: std::cmp::Eq + std::hash::Hash,
-            V: std::cmp::PartialEq + std::fmt::Debug,
-        {
-            assert_eq!(map.contains_key(&key), true);
-            assert_eq!(map[&key], val);
-        }
-    }
-
-    mod exposed_ports {
-        use super::*;
-        use test_helpers::*;
 
         #[test]
         fn serializes_correctly() {

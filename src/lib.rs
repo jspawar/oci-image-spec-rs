@@ -16,6 +16,11 @@ mod tests {
     let env_var_type_name = std::any::type_name::<EnvVar>();
     assert!(env_var_type_name.contains(&CRATE_NAME));
 
+    let port_protocol_type_name = std::any::type_name::<PortProtocol>();
+    assert!(port_protocol_type_name.contains(&CRATE_NAME));
+    let exposed_ports_type_name = std::any::type_name::<ExposedPorts>();
+    assert!(exposed_ports_type_name.contains(&CRATE_NAME));
+
     let config_type_name = std::any::type_name::<Config>();
     assert!(config_type_name.contains(&CRATE_NAME));
   }

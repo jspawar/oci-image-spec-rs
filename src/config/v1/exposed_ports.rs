@@ -1,9 +1,9 @@
-use std::fmt::Display;
 use std::collections::HashMap;
+use std::fmt::Display;
 
+use serde::de::{Deserializer, MapAccess, Visitor};
+use serde::ser::{SerializeMap, Serializer};
 use serde::{Deserialize, Serialize};
-use serde::ser::{Serializer, SerializeMap};
-use serde::de::{Deserializer, Visitor, MapAccess};
 
 #[derive(Debug)]
 pub struct ExposedPorts {

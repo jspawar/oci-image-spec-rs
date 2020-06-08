@@ -16,7 +16,7 @@ impl Serialize for EnvVar {
 
 impl<'de> Deserialize<'de> for EnvVar {
     fn deserialize<D: Deserializer<'de>>(deserializer: D) -> Result<Self, D::Error> {
-        deserializer.deserialize_string(EnvVarVisitor{})
+        deserializer.deserialize_string(EnvVarVisitor {})
     }
 }
 struct EnvVarVisitor;
@@ -31,12 +31,14 @@ impl<'de> Visitor<'de> for EnvVarVisitor {
     fn visit_str<E: Error>(self, v: &str) -> Result<Self::Value, E> {
         let tokens = v.split("=").collect::<Vec<&str>>();
         if tokens.len() == 2 {
-            Ok(EnvVar{
+            Ok(EnvVar {
                 var_name: tokens[0].to_string(),
                 var_value: tokens[1].to_string(),
             })
         } else {
-            Err(Error::custom::<&str>("invalid format for `Env` entry; should be: `VARNAME=VARVALUE`"))
+            Err(Error::custom::<&str>(
+                "invalid format for `Env` entry; should be: `VARNAME=VARVALUE`",
+            ))
         }
     }
 }
@@ -75,7 +77,8 @@ mod tests {
                 let result: Result<EnvVar, serde_json::error::Error> = serde_json::from_str(&raw);
                 assert!(result.is_err());
                 let err_string = result.err().unwrap().to_string();
-                assert!(err_string.contains("invalid format for `Env` entry; should be: `VARNAME=VARVALUE`"));
+                assert!(err_string
+                    .contains("invalid format for `Env` entry; should be: `VARNAME=VARVALUE`"));
             }
         }
     }

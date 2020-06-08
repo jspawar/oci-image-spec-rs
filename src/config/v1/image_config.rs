@@ -5,6 +5,7 @@ use std::io::Read;
 use crate::config::v1::env_var::EnvVar;
 use crate::config::v1::errors::ParseError;
 use crate::config::v1::exposed_ports::ExposedPorts;
+use crate::config::v1::volumes::Volumes;
 
 use chrono::prelude::*;
 use serde::{Deserialize, Serialize};
@@ -75,7 +76,7 @@ pub struct Config {
     pub env: Option<Vec<EnvVar>>,
     pub entrypoint: Option<Vec<String>>,
     pub cmd: Option<Vec<String>>,
-    // pub volumes: Option<Volumes>,
+    pub volumes: Option<Volumes>,
     pub working_dir: Option<String>,
     pub labels: Option<HashMap<String, String>>,
     // pub stop_signal: Option<OsSignal>,
@@ -217,6 +218,7 @@ mod tests {
                     }]),
                     entrypoint: Some(vec!["/bin/sh".to_string()]),
                     cmd: Some(vec!["-c".to_string(), "echo hello".to_string()]),
+                    volumes: Some(Volumes(vec!["/tmp/foobar".to_string()])),
                     working_dir: Some("/home".to_string()),
                     labels: Some(labels),
                 }),
@@ -239,7 +241,9 @@ mod tests {
   "os": "linux",
   "rootfs": {{
     "type": "layers",
-    "diff_ids": []
+    "diff_ids": [
+      "sha256:some-sha"
+    ]
   }},
   "created": "{}",
   "author": "Some One <someone@some.where>",

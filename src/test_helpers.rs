@@ -16,8 +16,39 @@ pub mod assertions {
         assert_eq!(map.contains_key(&key), true);
         assert_eq!(map[&key], val);
     }
+
+    // TODO: rewrite this somehow to not take ownership of `collection`
+    pub fn assert_consists_of<S, T>(collection: S, expected_items: &[T])
+    where
+        S: std::iter::IntoIterator<Item = T> + std::fmt::Debug,
+        T: std::cmp::PartialEq + std::fmt::Debug,
+    {
+        // saving this off for panic message
+        let collection_string = format!("{:?}", &collection);
+
+        let iter = collection.into_iter();
+        for item in iter {
+            assert!(
+                expected_items.iter().find(|&x| x == &item).is_some(),
+                "expected: {:?}, missing: {:?}",
+                collection_string,
+                &item
+            );
+        }
+    }
+
+    mod tests {
+        use super::*;
+
+        #[test]
+        fn test_assert_consists_of() {
+            assert_consists_of(vec![1, 2, 3], &vec![3, 1, 2]);
+            assert_consists_of(vec!["1", "2", "3"], &vec!["3", "1", "2"]);
+        }
+    }
 }
 
+#[cfg(test)]
 pub mod utils {
     use std::fs::{File, OpenOptions};
     use std::io::{Seek, Write};

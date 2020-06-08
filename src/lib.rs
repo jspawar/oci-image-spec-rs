@@ -37,6 +37,8 @@ mod tests {
 
         let root_fs_type_type_name = std::any::type_name::<v1::RootFSType>();
         assert!(root_fs_type_type_name.contains(&CRATE_NAME));
+        let volumes_root_fs_type_name = std::any::type_name::<v1::Volumes>();
+        assert!(volumes_root_fs_type_name.contains(&CRATE_NAME));
 
         let image_config_type_name = std::any::type_name::<v1::ImageConfig>();
         assert!(image_config_type_name.contains(&CRATE_NAME));

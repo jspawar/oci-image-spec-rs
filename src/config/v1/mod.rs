@@ -9,3 +9,6 @@ pub use exposed_ports::{ExposedPorts, PortProtocol};
 
 mod image_config;
 pub use image_config::{Architecture, Config, History, ImageConfig, RootFS, RootFSType, OS};
+
+mod volumes;
+pub use volumes::Volumes;

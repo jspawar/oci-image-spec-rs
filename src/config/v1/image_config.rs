@@ -10,7 +10,6 @@ use crate::config::v1::volumes::Volumes;
 use chrono::prelude::*;
 use serde::{Deserialize, Serialize};
 
-// TODO: reorganize/split up this file, but in a way that makes sense for importing it too
 #[derive(Debug, Serialize, Deserialize)]
 pub struct ImageConfig {
     // required
@@ -69,9 +68,10 @@ pub struct RootFS {
 }
 
 #[derive(Debug, Serialize, Deserialize)]
+#[serde(rename_all = "PascalCase")]
 pub struct Config {
     // TODO: make a struct for `user` like for `ExposedPorts`?
-    // pub user: Option<String>,
+    pub user: Option<String>,
     pub exposed_ports: Option<ExposedPorts>,
     pub env: Option<Vec<EnvVar>>,
     pub entrypoint: Option<Vec<String>>,
@@ -79,7 +79,8 @@ pub struct Config {
     pub volumes: Option<Volumes>,
     pub working_dir: Option<String>,
     pub labels: Option<HashMap<String, String>>,
-    // pub stop_signal: Option<OsSignal>,
+    // TODO: make an enum for OS signals?
+    pub stop_signal: Option<String>,
 }
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -189,6 +190,7 @@ mod tests {
     mod with_all_optional_properties {
         use super::*;
         use crate::config::v1::exposed_ports::PortProtocol;
+        use pretty_assertions::assert_eq;
 
         #[test]
         fn serializes_correctly() {
@@ -208,7 +210,7 @@ mod tests {
                 created: Some(timestamp),
                 author: Some("Some One <someone@some.where>".to_string()),
                 config: Some(Config {
-                    // user: Some(String::from("user")),
+                    user: Some(String::from("user")),
                     exposed_ports: Some(ExposedPorts {
                         port_protocol_map: port_protocol_map,
                     }),
@@ -221,6 +223,7 @@ mod tests {
                     volumes: Some(Volumes(vec!["/tmp/foobar".to_string()])),
                     working_dir: Some("/home".to_string()),
                     labels: Some(labels),
+                    stop_signal: Some("SIGTERM".to_string()),
                 }),
                 history: Some(vec![History {
                     created: Some(timestamp),
@@ -268,7 +271,8 @@ mod tests {
     "WorkingDir": "/home",
     "Labels": {{
       "bar.foo": "this is a label"
-    }}
+    }},
+    "StopSignal": "SIGTERM"
   }},
   "history": [
     {{

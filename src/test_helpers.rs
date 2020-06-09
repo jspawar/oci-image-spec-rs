@@ -47,29 +47,3 @@ pub mod assertions {
         }
     }
 }
-
-#[cfg(test)]
-pub mod utils {
-    use std::fs::{File, OpenOptions};
-    use std::io::{Seek, Write};
-
-    // TODO: return ref to file?
-    pub fn create_temp_file_with_contents(name: &'static str, contents: &[u8]) -> File {
-        let mut tmp_path = std::env::temp_dir();
-        tmp_path.push("oci-image-spec-rs-tests");
-        std::fs::create_dir_all(&tmp_path).unwrap();
-        tmp_path.push(name);
-
-        let mut file = OpenOptions::new()
-            .read(true)
-            .write(true)
-            .create(true)
-            .open(tmp_path)
-            .unwrap();
-
-        file.write_all(contents).unwrap();
-        file.seek(std::io::SeekFrom::Start(0)).unwrap();
-
-        file
-    }
-}

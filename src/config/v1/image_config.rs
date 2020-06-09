@@ -1,6 +1,4 @@
 use std::collections::HashMap;
-use std::fs::File;
-use std::io::Read;
 
 use crate::config::v1::env_var::EnvVar;
 use crate::config::v1::errors::ParseError;
@@ -98,9 +96,9 @@ pub enum RootFSType {
     Layers,
 }
 
-pub fn parse_image_config_file(file: &mut File) -> Result<ImageConfig, ParseError> {
+pub fn parse_image_config<T: std::io::Read>(source: &mut T) -> Result<ImageConfig, ParseError> {
     let mut raw = String::new();
-    file.read_to_string(&mut raw)?;
+    source.read_to_string(&mut raw)?;
 
     let config: ImageConfig = serde_json::from_str(&raw)?;
     Ok(config)
@@ -109,7 +107,6 @@ pub fn parse_image_config_file(file: &mut File) -> Result<ImageConfig, ParseErro
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::test_helpers::utils::*;
 
     mod with_only_required_properties {
         use super::*;
@@ -148,9 +145,7 @@ mod tests {
 
         #[test]
         fn parses_correctly() {
-            let mut cfg_file = create_temp_file_with_contents(
-                "config.json",
-                br#"{
+            let raw = r#"{
   "architecture": "386",
   "os": "linux",
   "rootfs": {
@@ -159,9 +154,8 @@ mod tests {
       "sha256:bogus-sha"
     ]
   }
-}"#,
-            );
-            let deserialized = parse_image_config_file(&mut cfg_file).unwrap();
+}"#;
+            let deserialized = parse_image_config(&mut raw.to_string().as_bytes()).unwrap();
 
             match deserialized.architecture {
                 Architecture::_386 => {}
@@ -291,9 +285,7 @@ mod tests {
 
         #[test]
         fn parses_correctly() {
-            let mut cfg_file = create_temp_file_with_contents(
-                "config.json",
-                br#"{
+            let raw = r#"{
   "architecture": "386",
   "os": "linux",
   "rootfs": {
@@ -302,9 +294,8 @@ mod tests {
       "sha256:bogus-sha"
     ]
   }
-}"#,
-            );
-            let deserialized = parse_image_config_file(&mut cfg_file).unwrap();
+}"#;
+            let deserialized = parse_image_config(&mut raw.to_string().as_bytes()).unwrap();
 
             match deserialized.architecture {
                 Architecture::_386 => {}

@@ -4,6 +4,7 @@ use crate::config::v1::env_var::EnvVar;
 use crate::config::v1::errors::ParseError;
 use crate::config::v1::exposed_ports::ExposedPorts;
 use crate::config::v1::volumes::Volumes;
+use crate::helpers::de_opt_datetime_utc;
 
 use chrono::prelude::*;
 use serde::{Deserialize, Serialize};
@@ -15,6 +16,7 @@ pub struct ImageConfig {
     pub os: OS,
     pub rootfs: RootFS,
     // optional
+    #[serde(default, deserialize_with = "de_opt_datetime_utc")]
     pub created: Option<DateTime<Utc>>,
     pub author: Option<String>,
     pub config: Option<Config>,
@@ -83,6 +85,7 @@ pub struct Config {
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct History {
+    #[serde(default, deserialize_with = "de_opt_datetime_utc")]
     pub created: Option<DateTime<Utc>>,
     pub author: Option<String>,
     pub created_by: Option<String>,
@@ -229,7 +232,9 @@ mod tests {
             };
 
             let serialized = serde_json::to_string_pretty(&config).unwrap();
-            let timestamp_str = timestamp.to_rfc3339_opts(SecondsFormat::Micros, true);
+            // serializes by default with microseconds precision, but can deserialize from any
+            // precision to conform with ISO 8601, RFC 3339
+            let timestamp_str = timestamp.to_rfc3339_opts(SecondsFormat::AutoSi, true);
             assert_eq!(
                 serialized,
                 format!(
@@ -285,17 +290,56 @@ mod tests {
 
         #[test]
         fn parses_correctly() {
-            let raw = r#"{
+            let timestamp = Utc::now().to_rfc3339();
+            let formatted_raw = format!(
+                r#"{{
   "architecture": "386",
   "os": "linux",
-  "rootfs": {
+  "rootfs": {{
     "type": "layers",
     "diff_ids": [
-      "sha256:bogus-sha"
+      "sha256:some-sha"
     ]
-  }
-}"#;
-            let deserialized = parse_image_config(&mut raw.to_string().as_bytes()).unwrap();
+  }},
+  "created": "{}",
+  "author": "Some One <someone@some.where>",
+  "config": {{
+    "User": "user",
+    "ExposedPorts": {{
+      "8080/tcp": {{}}
+    }},
+    "Env": [
+      "FOO=BAR"
+    ],
+    "Entrypoint": [
+      "/bin/sh"
+    ],
+    "Cmd": [
+      "-c",
+      "echo hello"
+    ],
+    "Volumes": {{
+      "/tmp/foobar": {{}}
+    }},
+    "WorkingDir": "/home",
+    "Labels": {{
+      "bar.foo": "this is a label"
+    }},
+    "StopSignal": "SIGTERM"
+  }},
+  "history": [
+    {{
+      "created": "{}",
+      "author": "Some One <someone@some.where>",
+      "created_by": "/bin/sh",
+      "comment": "this is a comment",
+      "empty_layer": false
+    }}
+  ]
+}}"#,
+                timestamp, timestamp
+            );
+            let deserialized = parse_image_config(&mut formatted_raw.as_bytes()).unwrap();
 
             match deserialized.architecture {
                 Architecture::_386 => {}
@@ -312,7 +356,7 @@ mod tests {
                 RootFSType::Layers => {}
             }
             assert_eq!(deserialized.rootfs.diff_ids.len(), 1);
-            assert_eq!(deserialized.rootfs.diff_ids[0], "sha256:bogus-sha");
+            assert_eq!(deserialized.rootfs.diff_ids[0], "sha256:some-sha");
         }
     }
 }

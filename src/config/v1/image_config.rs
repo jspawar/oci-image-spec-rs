@@ -4,7 +4,6 @@ use crate::config::v1::env_var::EnvVar;
 use crate::config::v1::errors::ParseError;
 use crate::config::v1::exposed_ports::ExposedPorts;
 use crate::config::v1::volumes::Volumes;
-use crate::helpers::de_opt_datetime_utc;
 
 use chrono::prelude::*;
 use serde::{Deserialize, Serialize};
@@ -16,7 +15,6 @@ pub struct ImageConfig {
     pub os: OS,
     pub rootfs: RootFS,
     // optional
-    #[serde(default, deserialize_with = "de_opt_datetime_utc")]
     pub created: Option<DateTime<Utc>>,
     pub author: Option<String>,
     pub config: Option<Config>,
@@ -85,7 +83,6 @@ pub struct Config {
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct History {
-    #[serde(default, deserialize_with = "de_opt_datetime_utc")]
     pub created: Option<DateTime<Utc>>,
     pub author: Option<String>,
     pub created_by: Option<String>,
